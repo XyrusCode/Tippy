@@ -1,0 +1,112 @@
+package com.xyrus.tippy
+
+import android.animation.ArgbEvaluator
+import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
+import android.widget.EditText
+import android.widget.SeekBar
+import android.widget.TextView
+import android.net.Uri
+import android.widget.Button
+import androidx.core.content.ContextCompat
+
+private const val TAG = "MainActivity"
+private const val INITIAL_TIP_PERCENT = 15
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var etBaseAmount: EditText
+    private lateinit var seekBarTip: SeekBar
+    private lateinit var tvTipPercentLabel: TextView
+    private lateinit var tvTipAmount: TextView
+    private lateinit var tvTotalAmount: TextView
+    private lateinit var tvTipDesc: TextView
+    private lateinit var xcButton: Button
+
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        etBaseAmount = findViewById(R.id.etBaseAmount)
+        seekBarTip = findViewById(R.id.seekBarTip)
+        tvTipPercentLabel = findViewById(R.id.tvTipPercentLabel)
+        tvTipAmount = findViewById(R.id.tvTipAmount)
+        tvTotalAmount = findViewById(R.id.tvTotalAmount)
+        tvTipDesc = findViewById(R.id.tvTipDesc)
+        xcButton = findViewById(R.id.xcButton)
+
+        seekBarTip.progress = INITIAL_TIP_PERCENT
+        tvTipPercentLabel.text = "15%"
+        updateTipDesc(INITIAL_TIP_PERCENT)
+        seekBarTip.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener{
+            override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
+            Log.i(TAG, "onProgressChanged $p1")
+             tvTipPercentLabel.text = "$p1%"
+                computeTipAndTotal()
+                updateTipDesc(p1)
+            }
+
+            override fun onStartTrackingTouch(p0: SeekBar?) {}
+
+            override fun onStopTrackingTouch(p0: SeekBar?) {}
+
+        })
+        etBaseAmount.addTextChangedListener(object: TextWatcher{
+            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+
+            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+
+            override fun afterTextChanged(p0: Editable?) {
+                Log.i(TAG, "afterTextChanged $p0")
+                computeTipAndTotal()
+            }
+
+        })
+        xcButton.setOnClickListener {
+            val url = "http://www.xyruscode.com"
+            val i = Intent(Intent.ACTION_VIEW)
+            i.data = Uri.parse(url)
+            startActivity(i)
+        }
+    }
+
+    private fun updateTipDesc(tipPercent: Int) {
+        val tipDesc = when (tipPercent){
+            in 0..9 -> tvTipDesc.text = "Poor"
+            in 10..14 -> tvTipDesc.text = "Acceptable"
+            in 15..19 -> tvTipDesc.text = "Good"
+            in 20..24-> tvTipDesc.text = "Great"
+            else -> "Amazing"
+        }
+
+        //Update the color based on tip percent
+        val color = ArgbEvaluator().evaluate(
+            tipPercent.toFloat()/seekBarTip.max,
+            ContextCompat.getColor(this, R.color.best_tip),
+            ContextCompat.getColor(this, R.color.worst_tip)
+        ) as Int
+        tvTipDesc.setTextColor(color)
+    }
+
+
+    private fun computeTipAndTotal(){
+        if (etBaseAmount.text.isEmpty()){
+            tvTipAmount.text = ""
+            tvTotalAmount.text = ""
+            return
+        }
+        //1. Get val of bas and tip percent
+        val baseAmount = etBaseAmount.text.toString().toDouble()
+        val tipPercent = seekBarTip.progress
+        //2. compute the tip and total
+        val tipAmount = baseAmount * tipPercent/100
+        val totalAmount = baseAmount + tipAmount
+        //Update UI
+        tvTipAmount.text = "%.2f".format(tipAmount)
+        tvTotalAmount.text = "$"+ "%.2f".format(totalAmount)
+    }
+
+}
